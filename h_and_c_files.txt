@@ -1,0 +1,119 @@
+Header (.h) vs Implementation (.c) Files
+In C, code is typically split between header files (.h) and implementation files (.c):
+
+Up until now, I had main.c and a bunch of .h files, but that isn’t scalable when you have lots of variables and functions being shared around.
+
+For example, when displaying the game over message I was using a function that places text at a certain x,y coordinate, but the compiler couldn’t find it without the include statement.
+
+Header (Library) Files (.h)
+Header files contain:
+
+Function declarations (prototypes)
+Type definitions (structs, enums, typedefs)
+Constant definitions
+Macro definitions
+External variable declarations
+They serve as an interface for the functionality a library provides.
+
+For example, in display.h:
+
+// Function declarations
+void output_message(void);
+void draw_screen(void);
+void draw_momentary_object(unsigned int obj_old_x, unsigned int obj_old_y, 
+                          unsigned int obj_x, unsigned int obj_y, 
+                          unsigned int obj_tile, unsigned int delay);
+
+Code (Implementation) Files (.c)
+Implementation files contain:
+
+The actual code that implements the functions declared in the header
+Definition of static (file-scope) variables
+Definition of global variables
+For example, in display.c:
+
+void draw_screen(void) {
+    // Draw the whole screen
+    int row, col;
+ 
+    if (draw_whole_screen && screen_drawn == false) {
+        for (row = 0; row < PLAYABLE_HEIGHT; row++) {
+            for (col = 0; col < MAZE_WIDTH; col++) {
+                cputcxy(col, row, get_map(col, row));
+            }
+        }
+        screen_drawn = true;
+    } else {
+        // Update the screen around the player with a set radius 
+        update_fov(player_x, player_y, 2);
+    }
+}
+Why Bother? (Benefits of Separation)
+Spaghetti code has its laziness benefits, but after a while, it breaks down. Modularity is better in the longer term:
+
+Encapsulation: Implementation details don’t have to be out in the open.
+Compilation efficiency: Changes to implementation don’t require recompiling. all files that use a module.
+Clarity: Clear separation between interface and implementation.
+Reduced conflicts: Minimizes naming conflicts and unintended dependencies.
+Reuse: There is a long history of programmers aiming to only do something once. Sometimes it works out.
+Global Variables and the extern Keyword
+One of the gotchas I was getting trapped by was the need for global variables due to my older retro target systems. Global variables are variables that can be accessed from any part of the program.
+
+In a modular codebase, they need to be:
+
+Defined in exactly one .c file
+Declared with the extern keyword in a header file
+Example
+In globals.h, we declare global variables:
+
+
+
+// Game state variables
+extern bool run;
+extern bool in_play;
+extern bool obstruction;
+extern bool screen_drawn;
+extern bool draw_whole_screen;
+ 
+// Player variables
+extern unsigned char player_x;
+extern unsigned char player_y;
+// ... more variables ...
+In globals.c, we define these variables:
+
+
+// Game state variables
+bool run = true;
+bool in_play = false;
+bool obstruction = false;
+bool screen_drawn = false;
+bool draw_whole_screen = false;
+ 
+// Player variables
+unsigned char player_x = 19;
+unsigned char player_y = 8;
+// ... more variables ...
+The extern Keyword
+The extern keyword tells the compiler “this variable is defined somewhere else.” It’s a promise that the linker will find the actual definition in another compilation unit.
+
+Benefits:
+
+Prevents multiple definitions of the same variable
+Allows sharing variables across multiple files
+Maintains a single source for variable initialization
+Include Guards
+Include guards prevent a header file from being included multiple times in the same compilation unit, which would cause redefinition errors.
+
+Example from globals.h:
+
+#ifndef GLOBALS_H
+#define GLOBALS_H
+ 
+// Header content goes here...
+ 
+#endif /* GLOBALS_H */
+How it works:
+
+First time the file is included: GLOBALS_H is not defined, so the preprocessor includes the content
+GLOBALS_H is defined
+Subsequent inclusions: GLOBALS_H is already defined, so the content is skipped
